@@ -3,10 +3,8 @@ from PIL import Image, ImageTk
 import random
 import time
 
-# Константы
 HUMAN_TEMP_LOW = 35.0
 HUMAN_TEMP_HIGH = 37.5
-
 ANIMAL_TEMPS = {
     "Корова": {"low": 37.5, "high": 39.5},
     "Курица": {"low": 40.0, "high": 42.0},
@@ -20,6 +18,7 @@ class ThermalApp:
         self.root.title("Система Термографии")
         self.root.geometry("800x600")
         self.selected_animal = None
+        self.mode = None
         self.main_frame = tk.Frame(root)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
         self.show_initial_selection()
@@ -37,7 +36,8 @@ class ThermalApp:
         btn_animal.grid(row=0, column=1, padx=10)
 
     def select_human(self):
-        print("Запуск режима человека")
+        self.mode = 'human'
+        self.start_camera_view()
 
     def select_animal_type(self):
         for widget in self.main_frame.winfo_children():
@@ -55,7 +55,16 @@ class ThermalApp:
 
     def start_animal_mode(self, animal_name):
         self.selected_animal = animal_name
-        print(f"Запуск режима: {self.selected_animal}")
+        self.mode = 'animal'
+        self.start_camera_view()
+
+    def start_camera_view(self):
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+        self.canvas = tk.Canvas(self.main_frame, bg="black", width=640, height=480)
+        self.canvas.pack(pady=10)
+        exit_btn = tk.Button(self.main_frame, text="Вернуться в меню", command=self.show_initial_selection)
+        exit_btn.pack(pady=10)
 
 if __name__ == "__main__":
     root = tk.Tk()
