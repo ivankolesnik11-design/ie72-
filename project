@@ -19,10 +19,8 @@ class ThermalApp:
         label.pack(pady=20)
         btn_frame = tk.Frame(self.main_frame)
         btn_frame.pack(pady=10)
-        
         btn_human = tk.Button(btn_frame, text="Человек", command=self.select_human, width=15, height=2)
         btn_human.grid(row=0, column=0, padx=10)
-        
         btn_animal = tk.Button(btn_frame, text="Животное", command=self.select_animal_type, width=15, height=2)
         btn_animal.grid(row=0, column=1, padx=10)
 
@@ -30,7 +28,14 @@ class ThermalApp:
         print("Выбран человек")
 
     def select_animal_type(self):
-        print("Выбрано животное")
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+        label = tk.Label(self.main_frame, text="Выберите животное:", font=("Arial", 16))
+        label.pack(pady=20)
+        animals = ["Корова", "Курица", "Баран", "Свинья"]
+        for animal in animals:
+            btn = tk.Button(self.main_frame, text=animal, width=20)
+            btn.pack(pady=5)
 
 if __name__ == "__main__":
     root = tk.Tk()
