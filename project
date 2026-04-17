@@ -62,7 +62,7 @@ class ThermalApp:
     def start_camera_view(self):
         for widget in self.main_frame.winfo_children():
             widget.destroy()
-        self.status_label = tk.Label(self.main_frame, text="Камера активна", font=("Arial", 12))
+        self.status_label = tk.Label(self.main_frame, text="Инициализация...", font=("Arial", 12))
         self.status_label.pack(pady=5)
         self.canvas = tk.Canvas(self.main_frame, bg="black", width=640, height=480)
         self.canvas.pack(pady=10)
@@ -79,13 +79,13 @@ class ThermalApp:
     def generate_recommendation(self, temp, mode, animal_name=None):
         if temp is None: return "..."
         if mode == 'human':
-            if temp < HUMAN_TEMP_LOW: return "Измерьте температуру."
-            elif temp > HUMAN_TEMP_HIGH: return "Обратитесь к врачу."
+            if temp < HUMAN_TEMP_LOW: return "Температура понижена. Измерьте температуру."
+            elif temp > HUMAN_TEMP_HIGH: return "Температура повышена. Вам следует обратиться к врачу."
             else: return "С вами все хорошо."
         else:
             limits = ANIMAL_TEMPS[animal_name]
             if temp < limits['low'] or temp > limits['high']:
-                return "Обратитесь к ветеринару."
+                return "Отклонение от нормы. Следует обратиться к ветеринару."
             else: return "Состояние нормальное."
 
     def update_camera_frame(self):
@@ -109,7 +109,7 @@ class ThermalApp:
             if self.is_simulating_sensor:
                 current_temp = round(random.uniform(t_low - 2, t_high + 2), 1)
                 
-            temp_str = f"{current_temp}C" if current_temp is not None else "Error"
+            temp_str = f"{current_temp}°C" if current_temp is not None else "Error"
             color = self.get_color_for_temp(current_temp, t_low, t_high)
             status_text = self.generate_recommendation(current_temp, self.mode, self.selected_animal)
                 
