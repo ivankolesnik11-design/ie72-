@@ -61,6 +61,8 @@ class ThermalApp:
     def start_camera_view(self):
         for widget in self.main_frame.winfo_children():
             widget.destroy()
+        self.status_label = tk.Label(self.main_frame, text="Камера активна", font=("Arial", 12))
+        self.status_label.pack(pady=5)
         self.canvas = tk.Canvas(self.main_frame, bg="black", width=640, height=480)
         self.canvas.pack(pady=10)
         exit_btn = tk.Button(self.main_frame, text="Вернуться в меню", command=self.show_initial_selection)
