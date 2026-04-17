@@ -19,6 +19,7 @@ class ThermalApp:
         self.root.geometry("800x600")
         self.selected_animal = None
         self.mode = None
+        self.is_simulating_sensor = True
         self.main_frame = tk.Frame(root)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
         self.show_initial_selection()
@@ -72,8 +73,15 @@ class ThermalApp:
     def update_camera_frame(self):
         self.canvas.delete("all")
         self.canvas.create_rectangle(0, 0, 640, 480, fill="#202020")
-        # Рисуем одну точку в центре
+        
+        # Генерация температуры
+        current_temp = 36.6
+        if self.is_simulating_sensor:
+            current_temp = round(random.uniform(34.0, 39.0), 1)
+            
         self.canvas.create_oval(315, 235, 325, 245, fill="green")
+        self.canvas.create_text(330, 240, text=f"{current_temp}C", fill="white")
+        
         self.root.after(1000, self.update_camera_frame)
 
 if __name__ == "__main__":
