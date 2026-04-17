@@ -67,6 +67,12 @@ class ThermalApp:
         self.canvas.pack(pady=10)
         exit_btn = tk.Button(self.main_frame, text="Вернуться в меню", command=self.show_initial_selection)
         exit_btn.pack(pady=10)
+        self.update_camera_frame()
+
+    def update_camera_frame(self):
+        self.canvas.delete("all")
+        # Здесь будет логика отрисовки
+        self.root.after(1000, self.update_camera_frame)
 
 if __name__ == "__main__":
     root = tk.Tk()
