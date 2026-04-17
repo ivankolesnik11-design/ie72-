@@ -71,7 +71,9 @@ class ThermalApp:
 
     def update_camera_frame(self):
         self.canvas.delete("all")
-        # Здесь будет логика отрисовки
+        self.canvas.create_rectangle(0, 0, 640, 480, fill="#202020")
+        # Рисуем одну точку в центре
+        self.canvas.create_oval(315, 235, 325, 245, fill="green")
         self.root.after(1000, self.update_camera_frame)
 
 if __name__ == "__main__":
