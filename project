@@ -8,6 +8,7 @@ class ThermalApp:
         self.root = root
         self.root.title("Система Термографии")
         self.root.geometry("800x600")
+        self.selected_animal = None # Новое состояние
         self.main_frame = tk.Frame(root)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
         self.show_initial_selection()
@@ -34,11 +35,16 @@ class ThermalApp:
         label.pack(pady=20)
         animals = ["Корова", "Курица", "Баран", "Свинья"]
         for animal in animals:
-            # Пока без команды
-            btn = tk.Button(self.main_frame, text=animal, width=20)
+            btn = tk.Button(self.main_frame, text=animal, 
+                            command=lambda a=animal: self.start_animal_mode(a),
+                            width=20)
             btn.pack(pady=5)
         back_btn = tk.Button(self.main_frame, text="Назад", command=self.show_initial_selection)
         back_btn.pack(side=tk.BOTTOM, pady=10)
+
+    def start_animal_mode(self, animal_name):
+        self.selected_animal = animal_name
+        print(f"Выбрано: {self.selected_animal}")
 
 if __name__ == "__main__":
     root = tk.Tk()
