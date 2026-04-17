@@ -34,8 +34,11 @@ class ThermalApp:
         label.pack(pady=20)
         animals = ["Корова", "Курица", "Баран", "Свинья"]
         for animal in animals:
+            # Пока без команды
             btn = tk.Button(self.main_frame, text=animal, width=20)
             btn.pack(pady=5)
+        back_btn = tk.Button(self.main_frame, text="Назад", command=self.show_initial_selection)
+        back_btn.pack(side=tk.BOTTOM, pady=10)
 
 if __name__ == "__main__":
     root = tk.Tk()
