@@ -70,6 +70,12 @@ class ThermalApp:
         exit_btn.pack(pady=10)
         self.update_camera_frame()
 
+    def get_color_for_temp(self, temp, t_low, t_high):
+        if temp is None: return "#808080"
+        if t_low <= temp <= t_high: return "#00FF00"
+        if temp < t_low: return "#0000FF"
+        return "#FF0000"
+
     def update_camera_frame(self):
         self.canvas.delete("all")
         self.canvas.create_rectangle(0, 0, 640, 480, fill="#202020")
@@ -79,8 +85,9 @@ class ThermalApp:
             current_temp = round(random.uniform(34.0, 39.0), 1)
             
         temp_str = f"{current_temp}C" if current_temp is not None else "Error"
+        color = self.get_color_for_temp(current_temp, HUMAN_TEMP_LOW, HUMAN_TEMP_HIGH)
             
-        self.canvas.create_oval(315, 235, 325, 245, fill="green")
+        self.canvas.create_oval(315, 235, 325, 245, fill="green", outline=color, width=3)
         self.canvas.create_text(330, 240, text=temp_str, fill="white")
         
         self.root.after(1000, self.update_camera_frame)
