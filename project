@@ -1,125 +1,171 @@
 import tkinter as tk
-from PIL import Image, ImageTk
+import cv2
+import numpy as np
 import random
-import time
 
-HUMAN_TEMP_LOW = 35.0
-HUMAN_TEMP_HIGH = 37.5
-ANIMAL_TEMPS = {
-    "Корова": {"low": 37.5, "high": 39.5},
-    "Курица": {"low": 40.0, "high": 42.0},
-    "Баран": {"low": 37.5, "high": 39.5},
-    "Свинья": {"low": 38.0, "high": 40.0}
-}
+# Настройки
+RANGES = {"human": (35.0, 37.5), "cow": (37.5, 39.5), "chicken": (40.0, 42.0),
+          "sheep": (37.5, 39.5), "pig": (38.0, 40.0)}
+NAMES = {"human": "👤 Человек", "cow": "🐄 Корова", "chicken": "🐔 Курица",
+         "sheep": "🐑 Баран", "pig": "🐷 Свинья"}
 
-class ThermalApp:
+
+class App:
     def __init__(self, root):
         self.root = root
-        self.root.title("Система Термографии")
+        self.root.title("ThermalVision Pro")
         self.root.geometry("800x600")
-        self.selected_animal = None
-        self.mode = None
-        self.is_simulating_sensor = True
-        self.main_frame = tk.Frame(root)
-        self.main_frame.pack(fill=tk.BOTH, expand=True)
-        self.show_initial_selection()
+        self.root.configure(bg="#1a1a2e")
 
-    def show_initial_selection(self):
-        for widget in self.main_frame.winfo_children():
-            widget.destroy()
-        label = tk.Label(self.main_frame, text="Выберите объект наблюдения:", font=("Arial", 16))
-        label.pack(pady=20)
-        btn_frame = tk.Frame(self.main_frame)
-        btn_frame.pack(pady=10)
-        btn_human = tk.Button(btn_frame, text="Человек", command=self.select_human, width=15, height=2)
-        btn_human.grid(row=0, column=0, padx=10)
-        btn_animal = tk.Button(btn_frame, text="Животное", command=self.select_animal_type, width=15, height=2)
-        btn_animal.grid(row=0, column=1, padx=10)
-
-    def select_human(self):
+        self.cap = None
         self.mode = 'human'
-        self.start_camera_view()
+        self.running = False
+        self.history = []
+        self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-    def select_animal_type(self):
-        for widget in self.main_frame.winfo_children():
-            widget.destroy()
-        label = tk.Label(self.main_frame, text="Выберите животное:", font=("Arial", 16))
-        label.pack(pady=20)
-        animals = ["Корова", "Курица", "Баран", "Свинья"]
-        for animal in animals:
-            btn = tk.Button(self.main_frame, text=animal, 
-                            command=lambda a=animal: self.start_animal_mode(a),
-                            width=20)
-            btn.pack(pady=5)
-        back_btn = tk.Button(self.main_frame, text="Назад", command=self.show_initial_selection)
-        back_btn.pack(side=tk.BOTTOM, pady=10)
+        self.show_menu()
 
-    def start_animal_mode(self, animal_name):
-        self.selected_animal = animal_name
-        self.mode = 'animal'
-        self.start_camera_view()
+    def clear(self):
+        for w in self.root.winfo_children(): w.destroy()
+        if self.cap: self.cap.release(); self.cap = None
 
-    def start_camera_view(self):
-        for widget in self.main_frame.winfo_children():
-            widget.destroy()
-        self.status_label = tk.Label(self.main_frame, text="Инициализация...", font=("Arial", 12))
-        self.status_label.pack(pady=5)
-        self.canvas = tk.Canvas(self.main_frame, bg="black", width=640, height=480)
-        self.canvas.pack(pady=10)
-        exit_btn = tk.Button(self.main_frame, text="Вернуться в меню", command=self.show_initial_selection)
-        exit_btn.pack(pady=10)
-        self.update_camera_frame()
+    def show_menu(self):
+        self.clear()
+        tk.Label(self.root, text="THERMALVISION PRO", font=("Arial", 18, "bold"), bg="#1a1a2e", fg="#e94560").pack(
+            pady=20)
+        f = tk.Frame(self.root, bg="#1a1a2e");
+        f.pack(expand=True)
+        tk.Button(f, text="Человек", command=lambda: self.start('human'), width=20, height=2, bg="#2196F3",
+                  fg="white").pack(pady=5)
+        for k, v in NAMES.items():
+            if k != 'human': tk.Button(f, text=v, command=lambda k=k: self.start(k), width=20, height=2, bg="#4CAF50",
+                                       fg="white").pack(pady=5)
 
-    def get_color_for_temp(self, temp, t_low, t_high):
-        if temp is None: return "#808080"
-        if t_low <= temp <= t_high: return "#00FF00"
-        if temp < t_low: return "#0000FF"
-        return "#FF0000"
+    def start(self, mode):
+        self.clear()
+        self.mode = mode
+        self.running = True
+        self.history = []
 
-    def generate_recommendation(self, temp, mode, animal_name=None):
-        if temp is None: return "..."
-        if mode == 'human':
-            if temp < HUMAN_TEMP_LOW: return "Температура понижена. Измерьте температуру."
-            elif temp > HUMAN_TEMP_HIGH: return "Температура повышена. Вам следует обратиться к врачу."
-            else: return "С вами все хорошо."
+        # UI
+        main = tk.Frame(self.root, bg="#1a1a2e");
+        main.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        left = tk.Frame(main, bg="#000");
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.lbl_vid = tk.Label(left, bg="#000");
+        self.lbl_vid.pack(expand=True)
+
+        right = tk.Frame(main, bg="#1a1a2e", width=200);
+        right.pack(side=tk.RIGHT, fill=tk.Y, padx=10)
+        self.lbl_temp = tk.Label(right, text="--.- °C", font=("Arial", 24, "bold"), bg="#16213e", fg="white");
+        self.lbl_temp.pack(fill=tk.X, pady=10)
+        self.lbl_rec = tk.Label(right, text="", font=("Arial", 9), bg="#16213e", fg="white", wraplength=180,
+                                justify=tk.LEFT);
+        self.lbl_rec.pack(fill=tk.X, pady=5)
+        self.canvas = tk.Canvas(right, height=80, bg="#0f0f1a", highlightthickness=0);
+        self.canvas.pack(fill=tk.X, pady=5)
+
+        btn_f = tk.Frame(right, bg="#1a1a2e");
+        btn_f.pack(pady=10)
+        self.btn_cam = tk.Button(btn_f, text="Камера", command=self.toggle_cam, width=10, bg="#4CAF50", fg="white");
+        self.btn_cam.pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_f, text="Меню", command=self.show_menu, width=10, bg="#757575", fg="white").pack(side=tk.LEFT,
+                                                                                                       padx=5)
+
+        self.init_cam()
+        self.loop()
+
+    def init_cam(self):
+        if self.cap: self.cap.release()
+        for i in range(3):
+            c = cv2.VideoCapture(i)
+            if c.isOpened() and c.read()[0]:
+                self.cap = c;
+                self.btn_cam.config(text="Стоп", bg="#f44336");
+                return
+        self.cap = None;
+        self.btn_cam.config(text="Сим", bg="#FF9800")
+
+    def toggle_cam(self):
+        if self.cap:
+            self.cap.release(); self.cap = None; self.btn_cam.config(text="Камера", bg="#4CAF50")
         else:
-            limits = ANIMAL_TEMPS[animal_name]
-            if temp < limits['low'] or temp > limits['high']:
-                return "Отклонение от нормы. Следует обратиться к ветеринару."
-            else: return "Состояние нормальное."
+            self.init_cam()
 
-    def update_camera_frame(self):
+    def get_temp(self):
+        lo, hi = RANGES[self.mode]
+        return round(random.uniform(lo - 0.5, hi + 0.5), 1)
+
+    def loop(self):
+        if not self.running: return
+
+        ret, frame = (False, None) if not self.cap else self.cap.read()
+        temp = None
+
+        if ret:
+            frame = cv2.resize(frame, (640, 480))
+            frame = cv2.flip(frame, 1)
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+            # Тепловой эффект
+            thermal = cv2.applyColorMap(gray, cv2.COLORMAP_JET)
+            frame = cv2.addWeighted(frame, 0.4, thermal, 0.6, 0)
+
+            if self.mode == 'human':
+                faces = self.face_cascade.detectMultiScale(gray, 1.1, 5)
+                if len(faces) > 0:
+                    x, y, w, h = faces[0]
+                    temp = self.get_temp()
+                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    cv2.putText(frame, f"{temp}°C", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            else:
+                temp = self.get_temp()
+                cv2.putText(frame, f"{NAMES[self.mode]}: {temp}°C", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7,
+                            (0, 255, 0), 2)
+        else:
+            # Симуляция
+            img = np.zeros((480, 640, 3), dtype=np.uint8)
+            cv2.circle(img, (320, 240), 100, (random.randint(100, 255), 50, 0), -1)
+            frame = cv2.applyColorMap(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), cv2.COLORMAP_JET)
+            temp = self.get_temp()
+            cv2.putText(frame, f"SIM: {temp}°C", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+        # Отображение (быстрый способ без PIL)
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        img_data = frame_rgb.tobytes()
+        photo = tk.PhotoImage(data=img_data, width=640, height=480)
+        self.lbl_vid.config(image=photo)
+        self.lbl_vid.image = photo
+
+        if temp:
+            self.update_info(temp)
+            self.draw_graph()
+
+        self.root.after(30, self.loop)
+
+    def update_info(self, temp):
+        lo, hi = RANGES[self.mode]
+        ok = lo <= temp <= hi
+        color = "#4CAF50" if ok else "#f44336"
+        self.lbl_temp.config(text=f"{temp}°C", fg=color)
+        self.lbl_rec.config(text="Норма" if ok else "Отклонение! Проверьте.", bg="#16213e")
+        self.history.append(temp)
+        if len(self.history) > 30: self.history.pop(0)
+
+    def draw_graph(self):
+        if len(self.history) < 2: return
         self.canvas.delete("all")
-        self.canvas.create_rectangle(0, 0, 640, 480, fill="#202020")
-        
-        if self.mode == 'human':
-            t_low, t_high = HUMAN_TEMP_LOW, HUMAN_TEMP_HIGH
-        else:
-            limits = ANIMAL_TEMPS.get(self.selected_animal, {"low": 38, "high": 40})
-            t_low, t_high = limits['low'], limits['high']
+        w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
+        mn, mx = min(self.history), max(self.history)
+        rng = max(mx - mn, 0.1)
+        pts = []
+        step = w / (len(self.history) - 1)
+        for i, t in enumerate(self.history):
+            pts.extend([i * step, h - ((t - mn) / rng * (h - 10)) - 5])
+        self.canvas.create_line(pts, fill="#e94560", width=2)
 
-        num_objects = random.randint(1, 2)
-        status_text = ""
-
-        for i in range(num_objects):
-            x = random.randint(50, 590)
-            y = random.randint(50, 430)
-            
-            current_temp = None
-            if self.is_simulating_sensor:
-                current_temp = round(random.uniform(t_low - 2, t_high + 2), 1)
-                
-            temp_str = f"{current_temp}°C" if current_temp is not None else "Error"
-            color = self.get_color_for_temp(current_temp, t_low, t_high)
-            status_text = self.generate_recommendation(current_temp, self.mode, self.selected_animal)
-                
-            self.canvas.create_oval(x-5, y-5, x+5, y+5, fill="green", outline=color, width=3)
-            self.canvas.create_text(x + 15, y, text=temp_str, fill="white")
-
-        self.status_label.config(text=status_text)
-        self.root.after(1000, self.update_camera_frame)
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = ThermalApp(root)
+    App(root)
     root.mainloop()
