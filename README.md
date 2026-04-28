@@ -30,17 +30,11 @@
 
 1.  Установите зависимости:
     ```bash
-    pip install pillow
+   pip install opencv-python numpy
+   pip install Pillow
     ```
     *(Библиотека `tkinter` обычно встроена в стандартную установку Python)*
 
-## 🚀 Запуск
-
-1.  Клонируйте репозиторий или скачайте файл `thermal_app.py`.
-2.  Запустите приложение из терминала:
-    ```bash
-    python thermal_app.py
-    ```
 
 ## 🎮 Как пользоваться
 
